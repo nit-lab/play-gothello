@@ -26,6 +26,7 @@
           <div class="rows" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
           <div id="board" class="board" role="group" aria-label="5 × 5 のマス"></div>
         </div>
+        <p id="ai-search" class="ai-search" aria-live="polite" hidden></p>
         <a id="download" class="download" download="gothello.jsonl" hidden>棋譜をダウンロード</a>
       </section>
 
@@ -38,17 +39,20 @@
           </fieldset>
           <button id="start" class="primary" type="submit" disabled>対局を始める</button>
         </form>
-        <div class="profile">
-          <h2>AIの評価設定</h2>
-          <p id="profile-name">標準設定</p>
-          <label for="profile-file">評価設定ファイル（JSON）</label>
-          <input id="profile-file" type="file" accept=".json,application/json" disabled>
-          <button id="reset-profile" type="button" disabled>標準に戻す</button>
-          <p id="profile-message" role="status" hidden></p>
-        </div>
-        <details>
-          <summary>遊び方</summary>
-          <p>空いているマスに交互に石を置きます。新しい石と自分の石で挟んだ相手の石が反転します。四隅の石は反転しません。縦・横・斜めのいずれかで5つ並べると勝ちです。</p>
+        <details class="game-menu">
+          <summary>メニュー</summary>
+          <div class="profile">
+            <h2>AIの評価設定</h2>
+            <p id="profile-name">標準設定</p>
+            <label for="profile-file">評価設定ファイル（JSON）</label>
+            <input id="profile-file" type="file" accept=".json,application/json" disabled>
+            <button id="reset-profile" type="button" disabled>標準に戻す</button>
+            <p id="profile-message" role="status" hidden></p>
+          </div>
+          <div class="rules">
+            <h2>遊び方</h2>
+            <p>空いているマスに交互に石を置きます。新しい石と自分の石で挟んだ相手の石が反転します。四隅の石は反転しません。縦・横・斜めのいずれかで5つ並べると勝ちです。</p>
+          </div>
         </details>
       </section>
     </div>

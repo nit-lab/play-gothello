@@ -3,6 +3,7 @@ const sides = document.querySelector("#side-controls");
 const start = document.querySelector("#start");
 const board = document.querySelector("#board");
 const status = document.querySelector("#status");
+const aiSearch = document.querySelector("#ai-search");
 const download = document.querySelector("#download");
 const profileFile = document.querySelector("#profile-file");
 const profileName = document.querySelector("#profile-name");
@@ -66,6 +67,20 @@ function render() {
     button.classList.toggle("last", match?.last === index);
     stone.className = mark === 1 ? "stone circle" : mark === 2 ? "stone cross" : "";
   });
+
+  const search = match?.lastSearch;
+  aiSearch.hidden = !search;
+  if (search) {
+    const move = cells[search.move].name;
+    const score = search.score > 0 ? "+" + search.score : search.score;
+    const summary = search.depth > 0
+      ? search.depth + "手先まで · 評価 " + score + "点（AI視点）"
+      : "読み切った深さなし";
+    const label = "AIの直近の手 " + move + " · " + summary;
+    if (aiSearch.textContent !== label) aiSearch.textContent = label;
+  } else {
+    aiSearch.textContent = "";
+  }
 
   if (!match?.record && recordURL) {
     URL.revokeObjectURL(recordURL);
