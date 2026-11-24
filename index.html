@@ -14,13 +14,13 @@
 <body>
   <main>
     <header class="masthead">
-      <div>
+      <div class="masthead-title">
+        <button id="open-menu" class="menu-button menu-toggle" type="button" aria-label="設定メニュー" aria-haspopup="dialog" aria-controls="game-menu">
+          <span class="menu-icon" aria-hidden="true"></span>
+        </button>
         <h1>Gothello<span>.</span></h1>
-        <p>挟んで返して、5つ並べる。</p>
       </div>
-      <button id="open-menu" class="menu-button" type="button" aria-haspopup="dialog" aria-controls="game-menu">
-        <span class="menu-icon" aria-hidden="true"></span>メニュー
-      </button>
+      <p>挟んで返して、5つ並べる。</p>
     </header>
 
     <section class="game" aria-label="対局盤">
@@ -30,17 +30,6 @@
         <div class="rows" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
         <div id="board" class="board" role="group" aria-label="5 × 5 のマス"></div>
       </div>
-      <p id="ai-search" class="ai-search" aria-live="polite" hidden></p>
-      <a id="download" class="download" download="gothello.jsonl" hidden>棋譜をダウンロード</a>
-    </section>
-  </main>
-
-  <dialog id="game-menu" class="game-menu" aria-labelledby="menu-title">
-    <div class="menu-panel">
-      <header class="menu-header">
-        <h2 id="menu-title">対局メニュー</h2>
-        <button id="close-menu" class="menu-button" type="button" autofocus>閉じる</button>
-      </header>
       <form id="start-form">
         <fieldset id="side-controls" disabled>
           <legend>あなたの手番</legend>
@@ -49,6 +38,17 @@
         </fieldset>
         <button id="start" class="primary" type="submit" disabled>対局を始める</button>
       </form>
+      <p id="ai-search" class="ai-search" aria-live="polite" hidden></p>
+      <a id="download" class="download" download="gothello.jsonl" hidden>棋譜をダウンロード</a>
+    </section>
+  </main>
+
+  <dialog id="game-menu" class="game-menu" aria-labelledby="menu-title">
+    <div class="menu-panel">
+      <header class="menu-header">
+        <h2 id="menu-title">設定メニュー</h2>
+        <button id="close-menu" class="menu-button" type="button" autofocus>閉じる</button>
+      </header>
       <section class="profile">
         <h3>AIの評価設定</h3>
         <p id="profile-name">標準設定</p>

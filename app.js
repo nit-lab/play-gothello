@@ -1,6 +1,10 @@
 const menu = document.querySelector("#game-menu");
 const openMenu = document.querySelector("#open-menu");
-const closeMenu = document.querySelector("#close-menu");
+const closeMenuButton = document.querySelector("#close-menu");
+const menuPanel = menu.querySelector(".menu-panel");
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+let menuOpenTimer;
+let menuCloseTimer;
 const form = document.querySelector("#start-form");
 const sides = document.querySelector("#side-controls");
 const start = document.querySelector("#start");
@@ -55,7 +59,7 @@ function render() {
     : "標準設定";
 
   if (!failed && ready) {
-    if (!match) status.textContent = "右上のメニューから対局を始めてください。";
+    if (!match) status.textContent = "先攻か後攻を選んで対局を始めてください。";
     else if (match.outcome === 3) status.textContent = "引き分け";
     else if (match.outcome) status.textContent = match.outcome === match.human ? "あなたの勝ち" : "AIの勝ち";
     else if (match.turn === match.human) status.textContent = `あなたの番（${marks[match.human]}）`;
@@ -135,12 +139,47 @@ function announceProfile(message) {
   profileMessage.textContent = message;
 }
 
-openMenu.addEventListener("click", () => menu.showModal());
-closeMenu.addEventListener("click", () => menu.close());
-menu.addEventListener("click", event => {
-  if (event.target === menu) menu.close();
+openMenu.addEventListener("click", () => {
+  if (!reducedMotion.matches) {
+    menu.classList.add("opening");
+    menuOpenTimer = setTimeout(() => menu.classList.remove("opening"), 250);
+  }
+  menu.showModal();
 });
-menu.addEventListener("close", () => openMenu.focus());
+
+function dismissMenu() {
+  if (!menu.open || menu.classList.contains("closing")) return;
+  if (reducedMotion.matches) {
+    menu.close();
+    return;
+  }
+
+  menuPanel.style.setProperty("--close-from", getComputedStyle(menuPanel).transform);
+  clearTimeout(menuOpenTimer);
+  menu.classList.remove("opening");
+  menu.classList.add("closing");
+  // Close even if animation events are suspended while the page is hidden.
+  menuCloseTimer = setTimeout(() => menu.close(), 230);
+}
+
+menuPanel.addEventListener("animationend", event => {
+  if (event.animationName === "menu-slide-out") menu.close();
+});
+closeMenuButton.addEventListener("click", dismissMenu);
+menu.addEventListener("click", event => {
+  if (event.target === menu) dismissMenu();
+});
+menu.addEventListener("cancel", event => {
+  event.preventDefault();
+  dismissMenu();
+});
+menu.addEventListener("close", () => {
+  clearTimeout(menuOpenTimer);
+  clearTimeout(menuCloseTimer);
+  menuPanel.style.removeProperty("--close-from");
+  menu.classList.remove("opening", "closing");
+  openMenu.focus();
+});
 
 form.addEventListener("submit", event => {
   event.preventDefault();
@@ -149,7 +188,6 @@ form.addEventListener("submit", event => {
   void run(async () => {
     state = await request({ action: "start", human });
     profileMessage.hidden = true;
-    menu.close();
     await replyIfNeeded();
   });
 });
