@@ -14,48 +14,54 @@
 <body>
   <main>
     <header class="masthead">
-      <h1>Gothello<span>.</span></h1>
-      <p>挟んで返して、5つ並べる。</p>
+      <div>
+        <h1>Gothello<span>.</span></h1>
+        <p>挟んで返して、5つ並べる。</p>
+      </div>
+      <button id="open-menu" class="menu-button" type="button" aria-haspopup="dialog" aria-controls="game-menu">
+        <span class="menu-icon" aria-hidden="true"></span>メニュー
+      </button>
     </header>
 
-    <div class="table">
-      <section class="game" aria-label="対局盤">
-        <p id="status" class="status" role="status">対局エンジンを読み込んでいます…</p>
-        <div class="board-frame">
-          <div class="columns" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span></div>
-          <div class="rows" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-          <div id="board" class="board" role="group" aria-label="5 × 5 のマス"></div>
-        </div>
-        <p id="ai-search" class="ai-search" aria-live="polite" hidden></p>
-        <a id="download" class="download" download="gothello.jsonl" hidden>棋譜をダウンロード</a>
-      </section>
+    <section class="game" aria-label="対局盤">
+      <p id="status" class="status" role="status">対局エンジンを読み込んでいます…</p>
+      <div class="board-frame">
+        <div class="columns" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span></div>
+        <div class="rows" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+        <div id="board" class="board" role="group" aria-label="5 × 5 のマス"></div>
+      </div>
+      <p id="ai-search" class="ai-search" aria-live="polite" hidden></p>
+      <a id="download" class="download" download="gothello.jsonl" hidden>棋譜をダウンロード</a>
+    </section>
+  </main>
 
-      <section class="settings" aria-label="対局設定">
-        <form id="start-form">
-          <fieldset id="side-controls" disabled>
-            <legend>あなたの手番</legend>
-            <label><input type="radio" name="side" value="1" checked><span><i class="stone circle"></i>先攻</span></label>
-            <label><input type="radio" name="side" value="2"><span><i class="stone cross"></i>後攻</span></label>
-          </fieldset>
-          <button id="start" class="primary" type="submit" disabled>対局を始める</button>
-        </form>
-        <details class="game-menu">
-          <summary>メニュー</summary>
-          <div class="profile">
-            <h2>AIの評価設定</h2>
-            <p id="profile-name">標準設定</p>
-            <label for="profile-file">評価設定ファイル（JSON）</label>
-            <input id="profile-file" type="file" accept=".json,application/json" disabled>
-            <button id="reset-profile" type="button" disabled>標準に戻す</button>
-            <p id="profile-message" role="status" hidden></p>
-          </div>
-          <div class="rules">
-            <h2>遊び方</h2>
-            <p>空いているマスに交互に石を置きます。新しい石と自分の石で挟んだ相手の石が反転します。四隅の石は反転しません。縦・横・斜めのいずれかで5つ並べると勝ちです。</p>
-          </div>
-        </details>
+  <dialog id="game-menu" class="game-menu" aria-labelledby="menu-title">
+    <div class="menu-panel">
+      <header class="menu-header">
+        <h2 id="menu-title">対局メニュー</h2>
+        <button id="close-menu" class="menu-button" type="button" autofocus>閉じる</button>
+      </header>
+      <form id="start-form">
+        <fieldset id="side-controls" disabled>
+          <legend>あなたの手番</legend>
+          <label><input type="radio" name="side" value="1" checked><span><i class="stone circle"></i>先攻</span></label>
+          <label><input type="radio" name="side" value="2"><span><i class="stone cross"></i>後攻</span></label>
+        </fieldset>
+        <button id="start" class="primary" type="submit" disabled>対局を始める</button>
+      </form>
+      <section class="profile">
+        <h3>AIの評価設定</h3>
+        <p id="profile-name">標準設定</p>
+        <label for="profile-file">評価設定ファイル（JSON）</label>
+        <input id="profile-file" type="file" accept=".json,application/json" disabled>
+        <button id="reset-profile" type="button" disabled>標準に戻す</button>
+        <p id="profile-message" role="status" hidden></p>
+      </section>
+      <section class="rules">
+        <h3>遊び方</h3>
+        <p>空いているマスに交互に石を置きます。新しい石と自分の石で挟んだ相手の石が反転します。四隅の石は反転しません。縦・横・斜めのいずれかで5つ並べると勝ちです。</p>
       </section>
     </div>
-  </main>
+  </dialog>
 </body>
 </html>

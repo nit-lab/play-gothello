@@ -1,3 +1,6 @@
+const menu = document.querySelector("#game-menu");
+const openMenu = document.querySelector("#open-menu");
+const closeMenu = document.querySelector("#close-menu");
 const form = document.querySelector("#start-form");
 const sides = document.querySelector("#side-controls");
 const start = document.querySelector("#start");
@@ -52,7 +55,7 @@ function render() {
     : "標準設定";
 
   if (!failed && ready) {
-    if (!match) status.textContent = "先攻か後攻を選んで対局を始めてください。";
+    if (!match) status.textContent = "右上のメニューから対局を始めてください。";
     else if (match.outcome === 3) status.textContent = "引き分け";
     else if (match.outcome) status.textContent = match.outcome === match.human ? "あなたの勝ち" : "AIの勝ち";
     else if (match.turn === match.human) status.textContent = `あなたの番（${marks[match.human]}）`;
@@ -132,6 +135,13 @@ function announceProfile(message) {
   profileMessage.textContent = message;
 }
 
+openMenu.addEventListener("click", () => menu.showModal());
+closeMenu.addEventListener("click", () => menu.close());
+menu.addEventListener("click", event => {
+  if (event.target === menu) menu.close();
+});
+menu.addEventListener("close", () => openMenu.focus());
+
 form.addEventListener("submit", event => {
   event.preventDefault();
   if (start.disabled) return;
@@ -139,6 +149,7 @@ form.addEventListener("submit", event => {
   void run(async () => {
     state = await request({ action: "start", human });
     profileMessage.hidden = true;
+    menu.close();
     await replyIfNeeded();
   });
 });
