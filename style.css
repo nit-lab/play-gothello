@@ -29,7 +29,27 @@ main { width: min(100% - 2rem, 56rem); margin: 0 auto; padding: clamp(1.5rem, 5v
 .masthead p { margin: .65rem 0 0 3.5rem; color: var(--muted); }
 
 .game { width: min(100%, 33rem); margin-inline: auto; }
-.status { margin: 0 0 .75rem; min-height: 1.6em; font-weight: 650; overflow-wrap: anywhere; }
+.board-overlay {
+  grid-area: 2 / 2;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.board-status {
+  max-width: 90%;
+  margin: 0;
+  padding: .65rem 1rem;
+  border: 1px solid #bb9e75;
+  border-radius: .45rem;
+  background: var(--paper);
+  box-shadow: 0 .2rem .85rem rgb(32 28 24 / .18);
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+}
+.board-status.result { font-size: clamp(1.2rem, 5vw, 1.65rem); }
 
 .board-frame {
   --axis: clamp(1rem, 4vw, 1.6rem);
@@ -60,6 +80,7 @@ main { width: min(100% - 2rem, 56rem); margin: 0 auto; padding: clamp(1.5rem, 5v
 .square[aria-disabled="false"]:hover { background: #ffeec0; }
 .square:focus-visible { z-index: 1; outline-offset: -4px; }
 .square.last { box-shadow: inset 0 0 0 3px #ae673f; }
+.square.winning { background: #f7d481; }
 
 .stone { display: inline-block; width: 52%; aspect-ratio: 1; position: relative; }
 .stone.circle { border: clamp(3px, 1vw, 7px) solid var(--accent); border-radius: 50%; }
@@ -75,7 +96,8 @@ main { width: min(100% - 2rem, 56rem); margin: 0 auto; padding: clamp(1.5rem, 5v
   transform: rotate(45deg);
 }
 .stone.cross::after { transform: rotate(-45deg); }
-.ai-search { margin: .75rem 0 0; color: var(--muted); font-size: .9rem; line-height: 1.5; }
+.move-reviews { margin-top: .65rem; color: var(--muted); font-size: .85rem; line-height: 1.55; }
+.move-reviews p { margin: 0; font-variant-numeric: tabular-nums; }
 .download { display: inline-block; margin-top: 1rem; color: #8b3324; text-underline-offset: .2em; }
 
 .menu-button {
@@ -156,19 +178,38 @@ html:has(.game-menu[open]) { overflow: hidden; }
 }
 .menu-header h2 { margin: 0; font-size: 1.2rem; }
 
-#start-form { margin-top: 1rem; }
-fieldset { padding: 0; border: 0; margin: 0 0 .85rem; display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
-legend, h3 { margin: 0 0 .6rem; font-size: .95rem; font-weight: 700; }
-fieldset label { position: relative; cursor: pointer; }
-fieldset input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-fieldset span { display: flex; align-items: center; justify-content: center; gap: .55rem; padding: .65rem .35rem; border: 1px solid var(--border); border-radius: .3rem; font-weight: 600; }
-fieldset .stone { width: .85rem; }
-fieldset .stone.circle { border-width: 2px; }
-fieldset input:checked + span { border-color: var(--accent); background: #f6e8dc; }
-fieldset input:focus-visible + span { outline: 3px solid #823723; outline-offset: 3px; }
-.primary { width: 100%; min-height: 2.8rem; padding: .55rem; border: 0; border-radius: .3rem; color: #fff; background: #922f21; font-weight: 700; }
-.primary:enabled:hover { background: #752517; }
-.primary:disabled { opacity: .62; }
+.side-controls { margin-top: .75rem; display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+.side-button { min-width: 0; min-height: 3.5rem; padding: .2rem; border: 0; background: transparent; color: var(--ink); }
+.side-face {
+  min-height: 3.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: .4rem .15rem;
+  border: 1px solid var(--border);
+  border-radius: .35rem;
+  font-weight: 650;
+  transform: scale(.96);
+}
+.side-button.leading .side-face { transform: scale(1); }
+.side-button .stone { flex: none; width: .85rem; }
+.side-button .stone.circle { border-width: 2px; }
+.side-button:enabled:hover .side-face { border-color: var(--accent); }
+.side-button.your-turn .side-face { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: #f6e8dc; }
+.side-note { color: var(--muted); font-size: .7rem; }
+.side-note:empty { display: none; }
+.side-lead { color: var(--ink); font-size: .7rem; }
+h3 { margin: 0 0 .6rem; font-size: .95rem; font-weight: 700; }
+
+.search-budget {
+  margin-bottom: 1.2rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+.search-budget output { display: block; color: var(--ink); font-variant-numeric: tabular-nums; }
+.search-budget input { width: 100%; margin: .35rem 0; min-height: 2rem; accent-color: var(--accent); }
+.search-budget #search-budget-hint { margin: 0; }
 
 .rules { margin-top: 1.2rem; padding-top: 1.1rem; border-top: 1px solid var(--border); }
 .game-menu p { margin: 0 0 .55rem; font-size: .9rem; line-height: 1.6; color: var(--muted); overflow-wrap: anywhere; }

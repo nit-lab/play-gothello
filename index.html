@@ -24,22 +24,26 @@
     </header>
 
     <section class="game" aria-label="対局盤">
-      <p id="status" class="status" role="status">対局エンジンを読み込んでいます…</p>
       <div class="board-frame">
         <div class="columns" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span></div>
         <div class="rows" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
         <div id="board" class="board" role="group" aria-label="5 × 5 のマス"></div>
+        <div class="board-overlay">
+          <p id="status" class="board-status" role="status">対局エンジンを読み込んでいます…</p>
+        </div>
       </div>
-      <form id="start-form">
-        <fieldset id="side-controls" disabled>
-          <legend>あなたの手番</legend>
-          <label><input type="radio" name="side" value="1" checked><span><i class="stone circle"></i>先攻</span></label>
-          <label><input type="radio" name="side" value="2"><span><i class="stone cross"></i>後攻</span></label>
-        </fieldset>
-        <button id="start" class="primary" type="submit" disabled>対局を始める</button>
-      </form>
-      <p id="ai-search" class="ai-search" aria-live="polite" hidden></p>
-      <a id="download" class="download" download="gothello.jsonl" hidden>棋譜をダウンロード</a>
+      <div id="side-controls" class="side-controls" role="group" aria-label="先攻か後攻を選んで対局開始">
+        <button class="side-button" type="button" data-side="1" disabled>
+          <span class="side-face"><i class="stone circle" aria-hidden="true"></i>先攻<span class="side-note"></span><span class="side-lead" hidden>優勢</span></span>
+        </button>
+        <button class="side-button" type="button" data-side="2" disabled>
+          <span class="side-face"><i class="stone cross" aria-hidden="true"></i>後攻<span class="side-note"></span><span class="side-lead" hidden>優勢</span></span>
+        </button>
+      </div>
+      <div class="move-reviews" aria-label="直近の着手の探索結果">
+        <p id="ai-search">AIの手 —</p>
+        <p id="human-search">あなたの手 —</p>
+      </div>
     </section>
   </main>
 
@@ -49,6 +53,12 @@
         <h2 id="menu-title">設定メニュー</h2>
         <button id="close-menu" class="menu-button" type="button" autofocus>閉じる</button>
       </header>
+      <section class="search-budget">
+        <h3><label for="search-budget">思考バジェット</label></h3>
+        <output id="search-budget-value" for="search-budget">50,000 ノード／手</output>
+        <input id="search-budget" type="range" min="10000" max="1000000" step="10000" value="50000" aria-describedby="search-budget-hint">
+        <p id="search-budget-hint">次の対局から適用</p>
+      </section>
       <section class="profile">
         <h3>AIの評価設定</h3>
         <p id="profile-name">標準設定</p>
@@ -57,6 +67,7 @@
         <button id="reset-profile" type="button" disabled>標準に戻す</button>
         <p id="profile-message" role="status" hidden></p>
       </section>
+      <a id="download" class="download" download="gothello.jsonl" hidden>棋譜をダウンロード</a>
       <section class="rules">
         <h3>遊び方</h3>
         <p>空いているマスに交互に石を置きます。新しい石と自分の石で挟んだ相手の石が反転します。四隅の石は反転しません。縦・横・斜めのいずれかで5つ並べると勝ちです。</p>

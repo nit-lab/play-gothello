@@ -5,18 +5,21 @@ const menuPanel = menu.querySelector(".menu-panel");
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let menuOpenTimer;
 let menuCloseTimer;
-const form = document.querySelector("#start-form");
-const sides = document.querySelector("#side-controls");
-const start = document.querySelector("#start");
+const sides = [...document.querySelectorAll(".side-button")];
 const board = document.querySelector("#board");
 const status = document.querySelector("#status");
 const aiSearch = document.querySelector("#ai-search");
+const humanSearch = document.querySelector("#human-search");
 const download = document.querySelector("#download");
+const budget = document.querySelector("#search-budget");
+const budgetValue = document.querySelector("#search-budget-value");
+const nodeFormat = new Intl.NumberFormat("ja-JP");
 const profileFile = document.querySelector("#profile-file");
 const profileName = document.querySelector("#profile-name");
 const profileMessage = document.querySelector("#profile-message");
 const resetProfile = document.querySelector("#reset-profile");
 const marks = ["空き", "◯", "✕"];
+const leadThreshold = 3;
 const cells = [];
 
 let worker;
@@ -26,6 +29,7 @@ let busy = false;
 let failed = false;
 let state = { profile: null, match: null };
 let recordURL;
+let resultDismissed = false;
 
 for (let index = 0; index < 25; index++) {
   const button = document.createElement("button");
@@ -49,9 +53,21 @@ for (let index = 0; index < 25; index++) {
 function render() {
   const match = state.match;
   const disabled = !ready || busy || failed;
-  sides.disabled = disabled;
-  start.disabled = disabled;
-  start.textContent = match ? "新しい対局" : "対局を始める";
+  const latest = match?.turn === match?.human ? match?.lastAI : match?.lastHuman;
+  const currentScore = match?.outcome === 0 && latest?.search?.depth > 0 ? latest.search.score : 0;
+  const leadingSide = Math.abs(currentScore) < leadThreshold ? 0 : currentScore > 0 ? 1 : 2;
+  for (const button of sides) {
+    const side = Number(button.dataset.side);
+    const active = match?.outcome === 0 && match.turn === side;
+    const yourTurn = active && side === match.human;
+    const note = yourTurn ? "あなたの番" : active ? "AI思考中" : "";
+    button.disabled = disabled;
+    button.classList.toggle("your-turn", yourTurn);
+    button.classList.toggle("leading", leadingSide === side);
+    button.querySelector(".side-lead").hidden = leadingSide !== side;
+    const label = button.querySelector(".side-note");
+    if (label.textContent !== note) label.textContent = note;
+  }
   profileFile.disabled = disabled;
   resetProfile.disabled = disabled || !state.profile;
   profileName.textContent = state.profile
@@ -59,11 +75,15 @@ function render() {
     : "標準設定";
 
   if (!failed && ready) {
-    if (!match) status.textContent = "先攻か後攻を選んで対局を始めてください。";
-    else if (match.outcome === 3) status.textContent = "引き分け";
-    else if (match.outcome) status.textContent = match.outcome === match.human ? "あなたの勝ち" : "AIの勝ち";
-    else if (match.turn === match.human) status.textContent = `あなたの番（${marks[match.human]}）`;
-    else status.textContent = "AIが考えています…";
+    let message = "";
+    if (!match) message = "先攻か後攻を選んで対局開始";
+    else if (match.outcome && !resultDismissed) {
+      if (match.outcome === 3) message = "引き分け";
+      else message = match.outcome === match.human ? "あなたの勝ち" : "AIの勝ち";
+    }
+    if (status.textContent !== message) status.textContent = message;
+    status.classList.toggle("result", Boolean(match?.outcome && !resultDismissed));
+    status.hidden = !message;
   }
 
   const canPlay = !disabled && match && match.outcome === 0 && match.turn === match.human;
@@ -72,22 +92,12 @@ function render() {
     button.setAttribute("aria-label", `${name} ${marks[mark]}`);
     button.setAttribute("aria-disabled", String(!canPlay || mark !== 0));
     button.classList.toggle("last", match?.last === index);
+    button.classList.toggle("winning", Boolean(match?.winning & (1 << index)));
     stone.className = mark === 1 ? "stone circle" : mark === 2 ? "stone cross" : "";
   });
 
-  const search = match?.lastSearch;
-  aiSearch.hidden = !search;
-  if (search) {
-    const move = cells[search.move].name;
-    const score = search.score > 0 ? "+" + search.score : search.score;
-    const summary = search.depth > 0
-      ? search.depth + "手先まで · 評価 " + score + "点（AI視点）"
-      : "読み切った深さなし";
-    const label = "AIの直近の手 " + move + " · " + summary;
-    if (aiSearch.textContent !== label) aiSearch.textContent = label;
-  } else {
-    aiSearch.textContent = "";
-  }
+  renderReview(aiSearch, "AIの手", match?.lastAI);
+  renderReview(humanSearch, "あなたの手", match?.lastHuman);
 
   if (!match?.record && recordURL) {
     URL.revokeObjectURL(recordURL);
@@ -99,6 +109,24 @@ function render() {
     download.href = recordURL;
   }
   download.hidden = !recordURL;
+}
+
+function renderReview(row, name, review) {
+  let label = name + " —";
+  if (review) {
+    label = name + " " + cells[review.move].name + " · ";
+    if (review.outcome) {
+      label += ["", "先攻勝ち", "後攻勝ち", "引き分け"][review.outcome];
+    } else if (!review.search) {
+      label += "探索中…";
+    } else if (review.search.depth === 0) {
+      label += "読み切った深さなし";
+    } else {
+      const { depth, score } = review.search;
+      label += `${depth}手先 · 評価 ${score > 0 ? "+" : ""}${score}点（先攻視点）`;
+    }
+  }
+  if (row.textContent !== label) row.textContent = label;
 }
 
 function request(command) {
@@ -113,6 +141,10 @@ async function replyIfNeeded() {
   const match = state.match;
   if (!match.outcome && match.turn !== match.human) {
     state = await request({ action: "reply" });
+    if (state.match.outcome === 0) {
+      render();
+      state = await request({ action: "review" });
+    }
   }
 }
 
@@ -131,6 +163,8 @@ async function run(action, onError = showGameError) {
 
 function showGameError(error) {
   failed = true;
+  status.hidden = false;
+  status.classList.remove("result");
   status.textContent = `対局を続けられません。ページを再読み込みしてください。 ${error.message}`;
 }
 
@@ -181,16 +215,33 @@ menu.addEventListener("close", () => {
   openMenu.focus();
 });
 
-form.addEventListener("submit", event => {
-  event.preventDefault();
-  if (start.disabled) return;
-  const human = Number(form.elements.side.value);
-  void run(async () => {
-    state = await request({ action: "start", human });
-    profileMessage.hidden = true;
-    await replyIfNeeded();
+document.addEventListener("click", event => {
+  if (state.match?.outcome && !resultDismissed && !status.contains(event.target)) {
+    resultDismissed = true;
+    render();
+  }
+}, { capture: true });
+
+function renderBudget() {
+  const label = nodeFormat.format(budget.valueAsNumber) + " ノード／手";
+  budgetValue.value = label;
+  budget.setAttribute("aria-valuetext", label);
+}
+
+budget.addEventListener("input", renderBudget);
+renderBudget();
+
+for (const button of sides) {
+  button.addEventListener("click", () => {
+    if (state.match?.outcome === 0 && !window.confirm("今の対局を終了して始め直しますか？")) return;
+    void run(async () => {
+      state = await request({ action: "start", human: Number(button.dataset.side), nodes: budget.valueAsNumber });
+      resultDismissed = false;
+      profileMessage.hidden = true;
+      await replyIfNeeded();
+    });
   });
-});
+}
 
 profileFile.addEventListener("change", () => {
   const file = profileFile.files[0];
