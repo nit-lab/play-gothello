@@ -12,6 +12,32 @@ const rows = "12345";
 const scoreSwing = 6;
 const maxHighlights = 3;
 
+const matchLink = document.querySelector("#return-to-match");
+const referrer = document.referrer ? new URL(document.referrer) : null;
+if (referrer?.origin === location.origin &&
+    [new URL("./", location.href).pathname, new URL("./index.html", location.href).pathname].includes(referrer.pathname)) {
+  history.replaceState({ returnToMatch: true }, "");
+}
+function plainClick(event) {
+  return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+}
+matchLink.addEventListener("click", event => {
+  if (history.state?.returnToMatch && plainClick(event)) {
+    event.preventDefault();
+    history.back();
+  }
+});
+turningLinks.addEventListener("click", event => {
+  const link = event.target.closest("a");
+  if (!link || !plainClick(event)) return;
+  const target = document.getElementById(link.hash.slice(1));
+  if (!target) return;
+  event.preventDefault();
+  history.replaceState(history.state, "", link.hash);
+  target.focus();
+  target.scrollIntoView();
+});
+
 function coordinate(index) {
   return columns[index % 5] + rows[Math.floor(index / 5)];
 }

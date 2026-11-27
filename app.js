@@ -115,9 +115,8 @@ function render() {
     stone.className = mark === 1 ? "stone circle" : mark === 2 ? "stone cross" : "";
   });
 
-  const ongoing = match?.outcome === 0;
-  renderReview(aiSearch, match?.lastAI, match?.human, ongoing && match.turn !== match.human);
-  renderReview(humanSearch, match?.lastHuman, match?.human, ongoing && match.turn === match.human);
+  renderReview(aiSearch, match, false);
+  renderReview(humanSearch, match, true);
 
   if (!match?.record && recordURL) {
     URL.revokeObjectURL(recordURL);
@@ -132,18 +131,14 @@ function render() {
   if (!match?.record) reviewOpenError.hidden = true;
 }
 
-function openGameReview(record) {
-  try {
-    sessionStorage.setItem(reviewRecordKey, record);
-  } catch {
-    reviewOpenError.textContent = "棋譜を振り返りページに渡せませんでした。";
-    reviewOpenError.hidden = false;
-    return;
-  }
-  window.location.assign("./review.html");
+function clearReviewSnapshot() {
+  if (history.state?.reviewSnapshot) history.replaceState(null, "");
 }
 
-function renderReview(row, review, human, active) {
+function renderReview(row, match, isHuman) {
+  const review = isHuman ? match?.lastHuman : match?.lastAI;
+  const side = match && (isHuman ? match.human : 3 - match.human);
+  const active = match?.outcome === 0 && match.turn === side;
   const player = row.querySelector(".move-player");
   player.classList.toggle("current-turn", active);
   if (active) player.setAttribute("aria-current", "true");
@@ -155,10 +150,10 @@ function renderReview(row, review, human, active) {
 
   let label = "";
   if (review?.outcome) {
-    label = review.outcome === 3 ? "引き分け" : review.outcome === human ? "あなたの勝ち" : "AIの勝ち";
+    label = review.outcome === 3 ? "引き分け" : review.outcome === match.human ? "あなたの勝ち" : "AIの勝ち";
   } else if (review?.search?.depth > 0) {
     const { depth, score } = review.search;
-    const ownScore = human === 2 ? -score : score;
+    const ownScore = side === 2 ? -score : score;
     label = `${depth}手先 · 評価 ${ownScore > 0 ? "+" : ""}${ownScore}点`;
   } else if (review) {
     label = review.search ? "読み切った深さなし" : "探索中…";
@@ -200,7 +195,17 @@ async function replyIfNeeded() {
   }
 }
 
-openReview.addEventListener("click", () => openGameReview(state.match.record));
+openReview.addEventListener("click", () => {
+  void run(async () => {
+    const { snapshot } = await request({ action: "save-review" });
+    sessionStorage.setItem(reviewRecordKey, state.match.record);
+    history.replaceState({ reviewSnapshot: snapshot, resultDismissed }, "");
+    window.location.assign("./review.html");
+  }, () => {
+    reviewOpenError.textContent = "棋譜を振り返りページに渡せませんでした。";
+    reviewOpenError.hidden = false;
+  });
+});
 
 matchAction.addEventListener("click", () => {
   if (waitingForAI) {
@@ -212,6 +217,7 @@ matchAction.addEventListener("click", () => {
   void run(async () => {
     state = await request({ action: "undo" });
     resultDismissed = false;
+    clearReviewSnapshot();
     if (!record) return;
     try {
       if (sessionStorage.getItem(reviewRecordKey) === record) {
@@ -256,7 +262,8 @@ menu.addEventListener("click", event => {
 menu.addEventListener("close", () => openMenu.focus());
 
 document.addEventListener("click", event => {
-  if (state.match?.outcome && !resultDismissed && !status.contains(event.target)) {
+  if (state.match?.outcome && !resultDismissed &&
+      !status.contains(event.target) && !openReview.contains(event.target)) {
     resultDismissed = true;
     render();
   }
@@ -299,6 +306,7 @@ for (const button of sides) {
     if (state.match?.outcome === 0 && !window.confirm("今の対局を終了して始め直しますか？")) return;
     void run(async () => {
       state = await request({ action: "start", human: Number(button.dataset.side), nodes: budget.valueAsNumber });
+      clearReviewSnapshot();
       leadingSide = 0;
       resultDismissed = false;
       profileMessage.hidden = true;
@@ -338,8 +346,20 @@ try {
   worker = new Worker(new URL("./worker.js", import.meta.url));
   worker.addEventListener("message", ({ data }) => {
     if (data.ready) {
-      ready = true;
-      render();
+      const saved = history.state;
+      if (saved?.reviewSnapshot) {
+        void run(async () => {
+          try {
+            state = await request({ action: "restore-review", snapshot: saved.reviewSnapshot });
+            resultDismissed = Boolean(saved.resultDismissed);
+          } finally {
+            ready = true;
+          }
+        }, clearReviewSnapshot);
+      } else {
+        ready = true;
+        render();
+      }
     } else if (data.fatal) {
       workerFailed(data.fatal);
     } else if (pending) {
