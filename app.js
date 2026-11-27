@@ -1,22 +1,19 @@
 const menu = document.querySelector("#game-menu");
 const openMenu = document.querySelector("#open-menu");
 const closeMenuButton = document.querySelector("#close-menu");
-const menuPanel = menu.querySelector(".menu-panel");
-const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-let menuOpenTimer;
-let menuCloseTimer;
 const sides = [...document.querySelectorAll(".side-button")];
 const board = document.querySelector("#board");
 const status = document.querySelector("#status");
 const aiSearch = document.querySelector("#ai-search");
 const humanSearch = document.querySelector("#human-search");
-const matchActions = document.querySelector("#match-actions");
-const matchLead = document.querySelector("#match-lead");
+const moveReviews = document.querySelector("#move-reviews");
+const openReview = document.querySelector("#open-review");
 const matchAction = document.querySelector("#match-action");
 const download = document.querySelector("#download");
 const reviewOpenError = document.querySelector("#review-open-error");
 const budget = document.querySelector("#search-budget");
 const budgetValue = document.querySelector("#search-budget-value");
+const budgetStorageKey = "gothello.searchBudget";
 const nodeFormat = new Intl.NumberFormat("ja-JP");
 const profileFile = document.querySelector("#profile-file");
 const profileName = document.querySelector("#profile-name");
@@ -24,6 +21,7 @@ const profileMessage = document.querySelector("#profile-message");
 const resetProfile = document.querySelector("#reset-profile");
 const marks = ["空き", "◯", "✕"];
 const leadThreshold = 3;
+const reviewRecordKey = "gothello.reviewRecord";
 const cells = [];
 
 let worker;
@@ -70,19 +68,20 @@ function render() {
     button.disabled = disabled;
     button.classList.toggle("your-turn", yourTurn);
     button.classList.toggle("leading", leadingSide === side);
+    button.setAttribute("aria-label", [
+      side === 1 ? "先攻" : "後攻",
+      leadingSide === side ? "優勢" : "",
+      note,
+    ].filter(Boolean).join("、"));
     const label = button.querySelector(".side-note");
     if (label.textContent !== note) label.textContent = note;
   }
   const canReview = Boolean(match?.record);
-  const lead = leadingSide === 1 ? "先攻 優勢" : leadingSide === 2 ? "後攻 優勢" : "";
-  const actionLabel = canReview ? "振り返り" : "待った";
-  matchActions.hidden = !match;
-  matchLead.hidden = !lead;
-  if (matchLead.textContent !== lead) matchLead.textContent = lead;
-  if (matchAction.textContent !== actionLabel) matchAction.textContent = actionLabel;
-  matchAction.disabled = canReview
-    ? disabled
-    : !ready || failed || !match?.canUndo || undoRequested || (busy && !waitingForAI);
+  moveReviews.hidden = canReview;
+  openReview.hidden = !canReview;
+  openReview.disabled = disabled;
+  matchAction.hidden = !match;
+  matchAction.disabled = !ready || failed || !match?.canUndo || undoRequested || (busy && !waitingForAI);
   profileFile.disabled = disabled;
   resetProfile.disabled = disabled || !state.profile;
   profileName.textContent = state.profile
@@ -129,7 +128,7 @@ function render() {
 
 function openGameReview(record) {
   try {
-    sessionStorage.setItem("gothello.reviewRecord", record);
+    sessionStorage.setItem(reviewRecordKey, record);
   } catch {
     reviewOpenError.textContent = "棋譜を振り返りページに渡せませんでした。";
     reviewOpenError.hidden = false;
@@ -174,7 +173,7 @@ async function replyIfNeeded() {
     // The Worker processes requests in order. Skip rendering a reply that
     // arrived after the player took back their move.
     if (undoRequested) {
-      state = await request({ action: "undo", pendingReply: true });
+      state = await request({ action: "undo" });
       return;
     }
     state = reply;
@@ -189,19 +188,26 @@ async function replyIfNeeded() {
   }
 }
 
+openReview.addEventListener("click", () => openGameReview(state.match.record));
+
 matchAction.addEventListener("click", () => {
-  const record = state.match?.record;
-  if (record) {
-    openGameReview(record);
-    return;
-  }
   if (waitingForAI) {
     undoRequested = true;
     render();
     return;
   }
+  const record = state.match?.record;
   void run(async () => {
     state = await request({ action: "undo" });
+    resultDismissed = false;
+    if (!record) return;
+    try {
+      if (sessionStorage.getItem(reviewRecordKey) === record) {
+        sessionStorage.removeItem(reviewRecordKey);
+      }
+    } catch {
+      // Storage may be unavailable, but the game can still resume.
+    }
   });
 });
 
@@ -230,47 +236,12 @@ function announceProfile(message) {
   profileMessage.textContent = message;
 }
 
-openMenu.addEventListener("click", () => {
-  if (!reducedMotion.matches) {
-    menu.classList.add("opening");
-    menuOpenTimer = setTimeout(() => menu.classList.remove("opening"), 250);
-  }
-  menu.showModal();
-});
-
-function dismissMenu() {
-  if (!menu.open || menu.classList.contains("closing")) return;
-  if (reducedMotion.matches) {
-    menu.close();
-    return;
-  }
-
-  menuPanel.style.setProperty("--close-from", getComputedStyle(menuPanel).transform);
-  clearTimeout(menuOpenTimer);
-  menu.classList.remove("opening");
-  menu.classList.add("closing");
-  // Close even if animation events are suspended while the page is hidden.
-  menuCloseTimer = setTimeout(() => menu.close(), 230);
-}
-
-menuPanel.addEventListener("animationend", event => {
-  if (event.animationName === "menu-slide-out") menu.close();
-});
-closeMenuButton.addEventListener("click", dismissMenu);
+openMenu.addEventListener("click", () => menu.showModal());
+closeMenuButton.addEventListener("click", () => menu.close());
 menu.addEventListener("click", event => {
-  if (event.target === menu) dismissMenu();
+  if (event.target === menu) menu.close();
 });
-menu.addEventListener("cancel", event => {
-  event.preventDefault();
-  dismissMenu();
-});
-menu.addEventListener("close", () => {
-  clearTimeout(menuOpenTimer);
-  clearTimeout(menuCloseTimer);
-  menuPanel.style.removeProperty("--close-from");
-  menu.classList.remove("opening", "closing");
-  openMenu.focus();
-});
+menu.addEventListener("close", () => openMenu.focus());
 
 document.addEventListener("click", event => {
   if (state.match?.outcome && !resultDismissed && !status.contains(event.target)) {
@@ -285,7 +256,30 @@ function renderBudget() {
   budget.setAttribute("aria-valuetext", label);
 }
 
-budget.addEventListener("input", renderBudget);
+function restoreBudget() {
+  try {
+    const stored = localStorage.getItem(budgetStorageKey);
+    const nodes = Number(stored);
+    const minimum = Number(budget.min);
+    if (String(nodes) === stored && Number.isInteger(nodes) &&
+        nodes >= minimum && nodes <= Number(budget.max) &&
+        (nodes - minimum) % Number(budget.step) === 0) {
+      budget.valueAsNumber = nodes;
+    }
+  } catch {
+    // The slider keeps its default when storage is unavailable.
+  }
+}
+
+budget.addEventListener("input", () => {
+  renderBudget();
+  try {
+    localStorage.setItem(budgetStorageKey, budget.value);
+  } catch {
+    // The current selection still applies to the next game in this page.
+  }
+});
+restoreBudget();
 renderBudget();
 
 for (const button of sides) {

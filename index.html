@@ -15,10 +15,10 @@
   <main>
     <header class="masthead">
       <div class="masthead-title">
-        <button id="open-menu" class="menu-button menu-toggle" type="button" aria-label="設定メニュー" aria-haspopup="dialog" aria-controls="game-menu">
-          <span class="menu-icon" aria-hidden="true"></span>
-        </button>
         <h1>Gothello<span>.</span></h1>
+        <button id="open-menu" class="menu-button menu-toggle" type="button" aria-label="設定" aria-haspopup="dialog" aria-controls="game-menu">
+          <span aria-hidden="true">⚙︎</span>
+        </button>
       </div>
       <p>挟んで返して、5つ並べる。</p>
     </header>
@@ -41,14 +41,12 @@
         </button>
       </div>
       <div class="game-details">
-        <div class="move-reviews" aria-label="直近の着手の探索結果">
+        <div id="move-reviews" class="move-reviews" aria-label="直近の着手の探索結果">
           <p id="ai-search">AIの手 —</p>
           <p id="human-search">あなたの手 —</p>
         </div>
-        <div id="match-actions" class="match-actions" hidden>
-          <span id="match-lead" class="match-lead" hidden></span>
-          <button id="match-action" class="menu-button match-action" type="button" disabled>待った</button>
-        </div>
+        <button id="open-review" class="menu-button review-action" type="button" hidden>振り返り</button>
+        <button id="match-action" class="menu-button match-action" type="button" hidden disabled>待った</button>
       </div>
       <p id="review-open-error" role="status" hidden></p>
     </section>
@@ -57,7 +55,7 @@
   <dialog id="game-menu" class="game-menu" aria-labelledby="menu-title">
     <div class="menu-panel">
       <header class="menu-header">
-        <h2 id="menu-title">設定メニュー</h2>
+        <h2 id="menu-title">設定</h2>
         <button id="close-menu" class="menu-button" type="button" autofocus>閉じる</button>
       </header>
       <section class="search-budget">

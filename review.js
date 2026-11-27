@@ -123,7 +123,7 @@ function comment(evaluation, before) {
   }
 }
 
-function render(report) {
+function render(report, record) {
   result.textContent = results[report.outcome] + " · 全" + report.plies.length + "手";
   const highlights = [];
   let before;
@@ -166,6 +166,12 @@ function render(report) {
     turningLinks.append(item);
   }
 
+  const recordURL = URL.createObjectURL(new Blob([record], { type: "application/x-ndjson" }));
+  for (const download of document.querySelectorAll(".download")) {
+    download.href = recordURL;
+    download.hidden = false;
+  }
+
   result.hidden = false;
   timeline.hidden = false;
   turningPoints.hidden = turningLinks.children.length === 0;
@@ -184,7 +190,7 @@ function analyze(record) {
       worker.postMessage({ action: "game-review", record });
     } else if (data.review) {
       worker.terminate();
-      render(data.review);
+      render(data.review, record);
     } else {
       fail();
     }
