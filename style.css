@@ -20,6 +20,9 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   outline: 3px solid #823723;
   outline-offset: 3px;
 }
+@media (hover: none) and (pointer: coarse) {
+  button:focus-visible, a:focus-visible, input:focus-visible { outline: none; }
+}
 
 main { width: min(100% - 2rem, 56rem); margin: 0 auto; padding: clamp(1.5rem, 5vw, 4rem) 0; }
 .masthead { border-bottom: 1px solid var(--border); padding-bottom: 1.2rem; margin-bottom: 1.5rem; }
@@ -123,7 +126,7 @@ main { width: min(100% - 2rem, 56rem); margin: 0 auto; padding: clamp(1.5rem, 5v
   font-weight: 650;
   white-space: nowrap;
 }
-.menu-toggle { flex: none; width: 2.75rem; padding: 0; font-size: 2rem; line-height: 1; }
+.menu-icon-button { flex: none; width: 2.75rem; padding: 0; }
 .menu-button:enabled:hover { border-color: var(--accent); }
 
 html:has(.game-menu[open]) { overflow: hidden; }

@@ -16,8 +16,11 @@
     <header class="masthead">
       <div class="masthead-title">
         <h1>Gothello<span>.</span></h1>
-        <button id="open-menu" class="menu-button menu-toggle" type="button" aria-label="設定" aria-haspopup="dialog" aria-controls="game-menu">
-          <span aria-hidden="true">⚙︎</span>
+        <button id="open-menu" class="menu-button menu-icon-button" type="button" aria-label="設定" aria-haspopup="dialog" aria-controls="game-menu">
+          <svg aria-hidden="true" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+            <path d="M10 2h4v2.4l1.7.7 1.7-1.7 3.2 3.2-1.7 1.7.7 1.7H22v4h-2.4l-.7 1.7 1.7 1.7-3.2 3.2-1.7-1.7-1.7.7V22h-4v-2.4l-1.7-.7-1.7 1.7-3.2-3.2 1.7-1.7-.7-1.7H2v-4h2.4l.7-1.7-1.7-1.7 3.2-3.2 1.7 1.7 1.7-.7z"/>
+            <circle cx="12" cy="12" r="3.2"/>
+          </svg>
         </button>
       </div>
       <p>挟んで返して、5つ並べる。</p>
@@ -62,7 +65,11 @@
     <div class="menu-panel">
       <header class="menu-header">
         <h2 id="menu-title">設定</h2>
-        <button id="close-menu" class="menu-button" type="button" autofocus>閉じる</button>
+        <button id="close-menu" class="menu-button menu-icon-button" type="button" aria-label="閉じる" autofocus>
+          <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="m6 6 12 12M18 6 6 18"/>
+          </svg>
+        </button>
       </header>
       <section class="search-budget">
         <h3><label for="search-budget">思考バジェット</label></h3>
