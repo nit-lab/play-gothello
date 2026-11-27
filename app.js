@@ -6,7 +6,6 @@ const board = document.querySelector("#board");
 const status = document.querySelector("#status");
 const aiSearch = document.querySelector("#ai-search");
 const humanSearch = document.querySelector("#human-search");
-const moveReviews = document.querySelector("#move-reviews");
 const openReview = document.querySelector("#open-review");
 const matchAction = document.querySelector("#match-action");
 const download = document.querySelector("#download");
@@ -34,6 +33,7 @@ let failed = false;
 let state = { profile: null, match: null };
 let recordURL;
 let resultDismissed = false;
+let leadingSide = 0;
 
 for (let index = 0; index < 25; index++) {
   const button = document.createElement("button");
@@ -57,9 +57,13 @@ for (let index = 0; index < 25; index++) {
 function render() {
   const match = state.match;
   const disabled = !ready || busy || failed;
-  const latest = match?.turn === match?.human ? match?.lastAI : match?.lastHuman;
-  const currentScore = match?.outcome === 0 && latest?.search?.depth > 0 ? latest.search.score : 0;
-  const leadingSide = Math.abs(currentScore) < leadThreshold ? 0 : currentScore > 0 ? 1 : 2;
+  if (!match || match.outcome) {
+    leadingSide = 0;
+  } else if (!busy) {
+    const latest = match.turn === match.human ? match.lastAI : match.lastHuman;
+    const score = latest?.search?.depth > 0 ? latest.search.score : 0;
+    leadingSide = Math.abs(score) < leadThreshold ? 0 : score > 0 ? 1 : 2;
+  }
   for (const button of sides) {
     const side = Number(button.dataset.side);
     const active = match?.outcome === 0 && match.turn === side;
@@ -67,17 +71,18 @@ function render() {
     const note = yourTurn ? "あなたの番" : active ? "AI思考中" : "";
     button.disabled = disabled;
     button.classList.toggle("your-turn", yourTurn);
-    button.classList.toggle("leading", leadingSide === side);
+    const isLeading = leadingSide === side;
+    button.classList.toggle("leading", isLeading);
+    button.querySelector(".side-lead").hidden = !isLeading;
     button.setAttribute("aria-label", [
       side === 1 ? "先攻" : "後攻",
-      leadingSide === side ? "優勢" : "",
+      isLeading ? "優勢" : "",
       note,
     ].filter(Boolean).join("、"));
     const label = button.querySelector(".side-note");
     if (label.textContent !== note) label.textContent = note;
   }
   const canReview = Boolean(match?.record);
-  moveReviews.hidden = canReview;
   openReview.hidden = !canReview;
   openReview.disabled = disabled;
   matchAction.hidden = !match;
@@ -110,8 +115,9 @@ function render() {
     stone.className = mark === 1 ? "stone circle" : mark === 2 ? "stone cross" : "";
   });
 
-  renderReview(aiSearch, "AIの手", match?.lastAI);
-  renderReview(humanSearch, "あなたの手", match?.lastHuman);
+  const ongoing = match?.outcome === 0;
+  renderReview(aiSearch, match?.lastAI, match?.human, ongoing && match.turn !== match.human);
+  renderReview(humanSearch, match?.lastHuman, match?.human, ongoing && match.turn === match.human);
 
   if (!match?.record && recordURL) {
     URL.revokeObjectURL(recordURL);
@@ -137,22 +143,28 @@ function openGameReview(record) {
   window.location.assign("./review.html");
 }
 
-function renderReview(row, name, review) {
-  let label = name + " —";
-  if (review) {
-    label = name + " " + cells[review.move].name + " · ";
-    if (review.outcome) {
-      label += ["", "先攻勝ち", "後攻勝ち", "引き分け"][review.outcome];
-    } else if (!review.search) {
-      label += "探索中…";
-    } else if (review.search.depth === 0) {
-      label += "読み切った深さなし";
-    } else {
-      const { depth, score } = review.search;
-      label += `${depth}手先 · 評価 ${score > 0 ? "+" : ""}${score}点（先攻視点）`;
-    }
+function renderReview(row, review, human, active) {
+  const player = row.querySelector(".move-player");
+  player.classList.toggle("current-turn", active);
+  if (active) player.setAttribute("aria-current", "true");
+  else player.removeAttribute("aria-current");
+
+  const coordinate = row.querySelector(".move-coordinate");
+  const move = review ? cells[review.move].name : "—";
+  if (coordinate.textContent !== move) coordinate.textContent = move;
+
+  let label = "";
+  if (review?.outcome) {
+    label = review.outcome === 3 ? "引き分け" : review.outcome === human ? "あなたの勝ち" : "AIの勝ち";
+  } else if (review?.search?.depth > 0) {
+    const { depth, score } = review.search;
+    const ownScore = human === 2 ? -score : score;
+    label = `${depth}手先 · 評価 ${ownScore > 0 ? "+" : ""}${ownScore}点`;
+  } else if (review) {
+    label = review.search ? "読み切った深さなし" : "探索中…";
   }
-  if (row.textContent !== label) row.textContent = label;
+  const evaluation = row.querySelector(".move-evaluation");
+  if (evaluation.textContent !== label) evaluation.textContent = label;
 }
 
 function request(command) {
@@ -287,6 +299,7 @@ for (const button of sides) {
     if (state.match?.outcome === 0 && !window.confirm("今の対局を終了して始め直しますか？")) return;
     void run(async () => {
       state = await request({ action: "start", human: Number(button.dataset.side), nodes: budget.valueAsNumber });
+      leadingSide = 0;
       resultDismissed = false;
       profileMessage.hidden = true;
       await replyIfNeeded();

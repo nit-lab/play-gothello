@@ -34,16 +34,22 @@
       </div>
       <div id="side-controls" class="side-controls" role="group" aria-label="先攻か後攻を選んで対局開始">
         <button class="side-button" type="button" data-side="1" disabled>
-          <span class="side-face"><i class="stone circle" aria-hidden="true"></i>先攻<span class="side-note"></span></span>
+          <span class="side-face">
+            <span class="side-role"><i class="stone circle" aria-hidden="true"></i>先攻<span class="side-lead" aria-hidden="true" hidden>優勢</span></span>
+            <span class="side-note"></span>
+          </span>
         </button>
         <button class="side-button" type="button" data-side="2" disabled>
-          <span class="side-face"><i class="stone cross" aria-hidden="true"></i>後攻<span class="side-note"></span></span>
+          <span class="side-face">
+            <span class="side-role"><i class="stone cross" aria-hidden="true"></i>後攻<span class="side-lead" aria-hidden="true" hidden>優勢</span></span>
+            <span class="side-note"></span>
+          </span>
         </button>
       </div>
       <div class="game-details">
-        <div id="move-reviews" class="move-reviews" aria-label="直近の着手の探索結果">
-          <p id="ai-search">AIの手 —</p>
-          <p id="human-search">あなたの手 —</p>
+        <div class="move-reviews" role="group" aria-label="直近の着手の探索結果">
+          <p id="ai-search"><span class="move-player">AI</span> <span class="move-coordinate">—</span> <span class="move-evaluation"></span></p>
+          <p id="human-search"><span class="move-player">あなた</span> <span class="move-coordinate">—</span> <span class="move-evaluation"></span></p>
         </div>
         <button id="open-review" class="menu-button review-action" type="button" hidden>振り返り</button>
         <button id="match-action" class="menu-button match-action" type="button" hidden disabled>待った</button>
