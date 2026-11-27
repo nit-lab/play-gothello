@@ -126,8 +126,9 @@ main { width: min(100% - 2rem, 56rem); margin: 0 auto; padding: clamp(1.5rem, 5v
   font-weight: 650;
   white-space: nowrap;
 }
-.menu-icon-button { flex: none; width: 2.75rem; padding: 0; }
 .menu-button:enabled:hover { border-color: var(--accent); }
+.menu-icon-button { flex: none; width: 2.75rem; padding: 0; border: 0; background: transparent; }
+.menu-icon-button:enabled:hover { color: var(--accent); }
 
 html:has(.game-menu[open]) { overflow: hidden; }
 .game-menu {
