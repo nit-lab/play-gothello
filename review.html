@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f9f6ee">
+  <link rel="stylesheet" href="./style.css">
+  <script src="./review.js" type="module"></script>
+  <title>対局の振り返り · Gothello</title>
+</head>
+<body>
+  <main class="review-page">
+    <header class="review-header">
+      <a href="./">対局画面へ</a>
+      <h1>対局の振り返り</h1>
+      <p id="review-result" hidden></p>
+    </header>
+    <p id="review-status" role="status">棋譜を分析しています…</p>
+    <nav id="review-turning-points" aria-labelledby="review-turning-title" hidden>
+      <h2 id="review-turning-title">形勢が動いた手</h2>
+      <ul></ul>
+    </nav>
+    <section id="review-timeline" aria-labelledby="review-timeline-title" hidden>
+      <h2 id="review-timeline-title">全着手</h2>
+      <p class="review-note">太枠は着手、青いマスは反転。形勢の推定には標準の評価設定を使います。</p>
+      <ol id="review-plies"></ol>
+    </section>
+  </main>
+</body>
+</html>

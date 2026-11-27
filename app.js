@@ -10,7 +10,11 @@ const board = document.querySelector("#board");
 const status = document.querySelector("#status");
 const aiSearch = document.querySelector("#ai-search");
 const humanSearch = document.querySelector("#human-search");
+const matchActions = document.querySelector("#match-actions");
+const matchLead = document.querySelector("#match-lead");
+const matchAction = document.querySelector("#match-action");
 const download = document.querySelector("#download");
+const reviewOpenError = document.querySelector("#review-open-error");
 const budget = document.querySelector("#search-budget");
 const budgetValue = document.querySelector("#search-budget-value");
 const nodeFormat = new Intl.NumberFormat("ja-JP");
@@ -26,6 +30,8 @@ let worker;
 let pending;
 let ready = false;
 let busy = false;
+let waitingForAI = false;
+let undoRequested = false;
 let failed = false;
 let state = { profile: null, match: null };
 let recordURL;
@@ -64,10 +70,19 @@ function render() {
     button.disabled = disabled;
     button.classList.toggle("your-turn", yourTurn);
     button.classList.toggle("leading", leadingSide === side);
-    button.querySelector(".side-lead").hidden = leadingSide !== side;
     const label = button.querySelector(".side-note");
     if (label.textContent !== note) label.textContent = note;
   }
+  const canReview = Boolean(match?.record);
+  const lead = leadingSide === 1 ? "先攻 優勢" : leadingSide === 2 ? "後攻 優勢" : "";
+  const actionLabel = canReview ? "振り返り" : "待った";
+  matchActions.hidden = !match;
+  matchLead.hidden = !lead;
+  if (matchLead.textContent !== lead) matchLead.textContent = lead;
+  if (matchAction.textContent !== actionLabel) matchAction.textContent = actionLabel;
+  matchAction.disabled = canReview
+    ? disabled
+    : !ready || failed || !match?.canUndo || undoRequested || (busy && !waitingForAI);
   profileFile.disabled = disabled;
   resetProfile.disabled = disabled || !state.profile;
   profileName.textContent = state.profile
@@ -109,6 +124,18 @@ function render() {
     download.href = recordURL;
   }
   download.hidden = !recordURL;
+  if (!match?.record) reviewOpenError.hidden = true;
+}
+
+function openGameReview(record) {
+  try {
+    sessionStorage.setItem("gothello.reviewRecord", record);
+  } catch {
+    reviewOpenError.textContent = "棋譜を振り返りページに渡せませんでした。";
+    reviewOpenError.hidden = false;
+    return;
+  }
+  window.location.assign("./review.html");
 }
 
 function renderReview(row, name, review) {
@@ -137,16 +164,46 @@ function request(command) {
 }
 
 async function replyIfNeeded() {
-  render();
   const match = state.match;
-  if (!match.outcome && match.turn !== match.human) {
-    state = await request({ action: "reply" });
+  if (match.outcome || match.turn === match.human) return;
+
+  waitingForAI = true;
+  render();
+  try {
+    const reply = await request({ action: "reply" });
+    // The Worker processes requests in order. Skip rendering a reply that
+    // arrived after the player took back their move.
+    if (undoRequested) {
+      state = await request({ action: "undo", pendingReply: true });
+      return;
+    }
+    state = reply;
     if (state.match.outcome === 0) {
       render();
-      state = await request({ action: "review" });
+      const review = await request({ action: "review" });
+      state = undoRequested ? await request({ action: "undo" }) : review;
     }
+  } finally {
+    waitingForAI = false;
+    undoRequested = false;
   }
 }
+
+matchAction.addEventListener("click", () => {
+  const record = state.match?.record;
+  if (record) {
+    openGameReview(record);
+    return;
+  }
+  if (waitingForAI) {
+    undoRequested = true;
+    render();
+    return;
+  }
+  void run(async () => {
+    state = await request({ action: "undo" });
+  });
+});
 
 async function run(action, onError = showGameError) {
   busy = true;

@@ -34,16 +34,23 @@
       </div>
       <div id="side-controls" class="side-controls" role="group" aria-label="先攻か後攻を選んで対局開始">
         <button class="side-button" type="button" data-side="1" disabled>
-          <span class="side-face"><i class="stone circle" aria-hidden="true"></i>先攻<span class="side-note"></span><span class="side-lead" hidden>優勢</span></span>
+          <span class="side-face"><i class="stone circle" aria-hidden="true"></i>先攻<span class="side-note"></span></span>
         </button>
         <button class="side-button" type="button" data-side="2" disabled>
-          <span class="side-face"><i class="stone cross" aria-hidden="true"></i>後攻<span class="side-note"></span><span class="side-lead" hidden>優勢</span></span>
+          <span class="side-face"><i class="stone cross" aria-hidden="true"></i>後攻<span class="side-note"></span></span>
         </button>
       </div>
-      <div class="move-reviews" aria-label="直近の着手の探索結果">
-        <p id="ai-search">AIの手 —</p>
-        <p id="human-search">あなたの手 —</p>
+      <div class="game-details">
+        <div class="move-reviews" aria-label="直近の着手の探索結果">
+          <p id="ai-search">AIの手 —</p>
+          <p id="human-search">あなたの手 —</p>
+        </div>
+        <div id="match-actions" class="match-actions" hidden>
+          <span id="match-lead" class="match-lead" hidden></span>
+          <button id="match-action" class="menu-button match-action" type="button" disabled>待った</button>
+        </div>
       </div>
+      <p id="review-open-error" role="status" hidden></p>
     </section>
   </main>
 
