@@ -23,6 +23,8 @@ const leadThreshold = 3;
 const reviewRecordKey = "gothello.reviewRecord";
 const cells = [];
 const minimumReplyDelay = 250;
+const undoFadeDuration = 200;
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const pending = [];
 
 let worker;
@@ -110,14 +112,7 @@ function render() {
   }
 
   const canPlay = !disabled && match && match.outcome === 0 && match.turn === match.human;
-  cells.forEach(({ button, stone, name }, index) => {
-    const mark = match?.cells[index] ?? 0;
-    button.setAttribute("aria-label", `${name} ${marks[mark]}`);
-    button.setAttribute("aria-disabled", String(!canPlay || mark !== 0));
-    button.classList.toggle("last", match?.last === index);
-    button.classList.toggle("winning", Boolean(match?.winning & (1 << index)));
-    stone.className = mark === 1 ? "stone circle" : mark === 2 ? "stone cross" : "";
-  });
+  renderBoard(match, canPlay);
 
   renderReview(aiSearch, match, false);
   renderReview(humanSearch, match, true);
@@ -133,6 +128,17 @@ function render() {
   }
   download.hidden = !recordURL;
   if (!match?.record) reviewOpenError.hidden = true;
+}
+
+function renderBoard(match, canPlay) {
+  cells.forEach(({ button, stone, name }, index) => {
+    const mark = match?.cells[index] ?? 0;
+    button.setAttribute("aria-label", `${name} ${marks[mark]}`);
+    button.setAttribute("aria-disabled", String(!canPlay || mark !== 0));
+    button.classList.toggle("last", match?.last === index);
+    button.classList.toggle("winning", Boolean(match?.winning & (1 << index)));
+    stone.className = mark === 1 ? "stone circle" : mark === 2 ? "stone cross" : "";
+  });
 }
 
 function highlightMove(index, player) {
@@ -195,7 +201,7 @@ async function replyIfNeeded(delay = 0) {
     if (failed) return;
     // Skip a reply if the player took back their move before it was shown.
     if (undoRequested) {
-      state = await request({ action: "undo" });
+      await undoTurn();
       return;
     }
     state = reply;
@@ -243,21 +249,42 @@ matchAction.addEventListener("click", () => {
     render();
     return;
   }
-  const record = state.match?.record;
-  void run(async () => {
-    state = await request({ action: "undo" });
-    resultDismissed = false;
-    clearReviewSnapshot();
-    if (!record) return;
-    try {
-      if (sessionStorage.getItem(reviewRecordKey) === record) {
-        sessionStorage.removeItem(reviewRecordKey);
-      }
-    } catch {
-      // Storage may be unavailable, but the game can still resume.
-    }
-  });
+  void run(undoTurn);
 });
+
+async function fadeUndoStone(index) {
+  const fade = cells[index].stone.animate(
+    [{ opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(.7)" }],
+    { duration: undoFadeDuration, easing: "ease-in", fill: "forwards" },
+  );
+  await fade.finished;
+  fade.cancel();
+}
+
+async function undoTurn() {
+  const shown = state.match;
+  const { undoIntermediate, ...restored } = await request({ action: "undo" });
+  if (!reducedMotion.matches) {
+    resultDismissed = true;
+    render();
+    await fadeUndoStone(shown.last);
+    if (undoIntermediate && shown.last === shown.lastAI?.move) {
+      renderBoard({ cells: undoIntermediate, last: shown.lastHuman.move }, false);
+      await fadeUndoStone(shown.lastHuman.move);
+    }
+  }
+  state = restored;
+  resultDismissed = false;
+  clearReviewSnapshot();
+  if (!shown.record) return;
+  try {
+    if (sessionStorage.getItem(reviewRecordKey) === shown.record) {
+      sessionStorage.removeItem(reviewRecordKey);
+    }
+  } catch {
+    // Storage may be unavailable, but the game can still resume.
+  }
+}
 
 async function run(action, onError = showGameError) {
   busy = true;
