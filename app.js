@@ -22,9 +22,10 @@ const marks = ["空き", "◯", "✕"];
 const leadThreshold = 3;
 const reviewRecordKey = "gothello.reviewRecord";
 const cells = [];
+const minimumReplyDelay = 250;
+const pending = [];
 
 let worker;
-let pending;
 let ready = false;
 let busy = false;
 let waitingForAI = false;
@@ -46,7 +47,8 @@ for (let index = 0; index < 25; index++) {
     if (button.getAttribute("aria-disabled") === "false") {
       void run(async () => {
         state = await request({ action: "play", move: index });
-        await replyIfNeeded();
+        highlightMove(state.match.last, "human");
+        await replyIfNeeded(minimumReplyDelay);
       });
     }
   });
@@ -61,8 +63,10 @@ function render() {
     leadingSide = 0;
   } else if (!busy) {
     const latest = match.turn === match.human ? match.lastAI : match.lastHuman;
-    const score = latest?.search?.depth > 0 ? latest.search.score : 0;
-    leadingSide = Math.abs(score) < leadThreshold ? 0 : score > 0 ? 1 : 2;
+    if (!latest || latest.search) {
+      const score = latest?.search.depth > 0 ? latest.search.score : 0;
+      leadingSide = Math.abs(score) < leadThreshold ? 0 : score > 0 ? 1 : 2;
+    }
   }
   for (const button of sides) {
     const side = Number(button.dataset.side);
@@ -131,6 +135,14 @@ function render() {
   if (!match?.record) reviewOpenError.hidden = true;
 }
 
+function highlightMove(index, player) {
+  cells[index].button.dataset.moveHighlight = player;
+}
+
+function clearMoveHighlights() {
+  for (const { button } of cells) delete button.dataset.moveHighlight;
+}
+
 function clearReviewSnapshot() {
   if (history.state?.reviewSnapshot) history.replaceState(null, "");
 }
@@ -164,34 +176,51 @@ function renderReview(row, match, isHuman) {
 
 function request(command) {
   return new Promise((resolve, reject) => {
-    pending = { resolve, reject };
     worker.postMessage(command);
+    pending.push({ resolve, reject });
   });
 }
 
-async function replyIfNeeded() {
+async function replyIfNeeded(delay = 0) {
   const match = state.match;
   if (match.outcome || match.turn === match.human) return;
 
   waitingForAI = true;
   render();
   try {
-    const reply = await request({ action: "reply" });
-    // The Worker processes requests in order. Skip rendering a reply that
-    // arrived after the player took back their move.
+    const [reply] = await Promise.all([
+      request({ action: "reply" }),
+      delay && new Promise(resolve => setTimeout(resolve, delay)),
+    ]);
+    if (failed) return;
+    // Skip a reply if the player took back their move before it was shown.
     if (undoRequested) {
       state = await request({ action: "undo" });
       return;
     }
     state = reply;
-    if (state.match.outcome === 0) {
-      render();
-      const review = await request({ action: "review" });
-      state = undoRequested ? await request({ action: "undo" }) : review;
-    }
+    highlightMove(reply.match.last, "ai");
+    if (reply.match.outcome === 0) void reviewReply(reply);
   } finally {
     waitingForAI = false;
     undoRequested = false;
+  }
+}
+
+async function reviewReply(reply) {
+  try {
+    // The Worker processes commands serially. The player can choose their
+    // next move while this evaluation is running.
+    const review = await request({ action: "review" });
+    if (state === reply) {
+      state = review;
+      render();
+    }
+  } catch (error) {
+    if (!failed) {
+      showGameError(error);
+      render();
+    }
   }
 }
 
@@ -208,6 +237,7 @@ openReview.addEventListener("click", () => {
 });
 
 matchAction.addEventListener("click", () => {
+  clearMoveHighlights();
   if (waitingForAI) {
     undoRequested = true;
     render();
@@ -306,6 +336,7 @@ for (const button of sides) {
     if (state.match?.outcome === 0 && !window.confirm("今の対局を終了して始め直しますか？")) return;
     void run(async () => {
       state = await request({ action: "start", human: Number(button.dataset.side), nodes: budget.valueAsNumber });
+      clearMoveHighlights();
       clearReviewSnapshot();
       leadingSide = 0;
       resultDismissed = false;
@@ -335,8 +366,7 @@ resetProfile.addEventListener("click", () => {
 function workerFailed(message) {
   const error = new Error(message);
   showGameError(error);
-  pending?.reject(error);
-  pending = undefined;
+  for (const { reject } of pending.splice(0)) reject(error);
   worker?.terminate();
   render();
 }
@@ -362,9 +392,8 @@ try {
       }
     } else if (data.fatal) {
       workerFailed(data.fatal);
-    } else if (pending) {
-      const { resolve, reject } = pending;
-      pending = undefined;
+    } else if (pending.length) {
+      const { resolve, reject } = pending.shift();
       if (data.error) reject(new Error(data.error));
       else resolve(data.state);
     }

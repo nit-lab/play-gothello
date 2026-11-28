@@ -87,6 +87,27 @@ main { width: min(100% - 2rem, 56rem); margin: 0 auto; padding: clamp(1.5rem, 5v
 .square[aria-disabled="false"]:hover { background: #ffeec0; }
 .square:focus-visible { z-index: 1; outline-offset: -4px; }
 .square.last { box-shadow: inset 0 0 0 3px #ae673f; }
+#board .square { position: relative; }
+#board .square[data-move-highlight="human"] { --move-highlight: #a83b26; }
+#board .square[data-move-highlight="ai"] { --move-highlight: #196375; }
+#board .square[data-move-highlight]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 5px var(--move-highlight);
+  pointer-events: none;
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  #board .square[data-move-highlight]::after { animation: move-highlight 500ms ease-out; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #board .square.last[data-move-highlight]::after { opacity: 1; }
+}
+@keyframes move-highlight {
+  0%, 25% { opacity: 1; }
+  100% { opacity: 0; }
+}
 .square.winning { background: #f7d481; }
 
 .stone { display: inline-block; width: 52%; aspect-ratio: 1; position: relative; }
